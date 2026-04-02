@@ -1,6 +1,5 @@
 package com.example.ProjectSprintFrontend.controller;
 
-
 import com.example.ProjectSprintFrontend.dto.Employee_DTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -17,7 +16,6 @@ import java.util.Map;
 
 @Controller
 public class EmployeeController {
-
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${backend.base-url}")
@@ -28,7 +26,7 @@ public class EmployeeController {
         return BASE_API + "/employees";
     }
 
-    @GetMapping("/")
+    @GetMapping("/employees")
     public String viewHomePage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) Integer editId,
@@ -143,7 +141,7 @@ public class EmployeeController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "An error occurred during addition.");
         }
-        return "redirect:/";
+        return "redirect:/employees";
     }
 
     @GetMapping("/customers")
@@ -181,7 +179,7 @@ public class EmployeeController {
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Update failed.");
         }
-        return "redirect:/";
+        return "redirect:/employees";
     }
 
     // 5. UPDATE OFFICE (AJAX/JS)
