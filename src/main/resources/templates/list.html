@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Orders — ClassicModels</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/js/inventory-theme.css}"/>    <style>
+        .sort-link { display:inline-flex; align-items:center; gap:4px; color:inherit; text-decoration:none; }
+        .sort-link:hover { color:var(--accent); }
+        th.sorted .sort-link { color:var(--accent); }
+        .sort-arrow { font-size:0.7rem; opacity:0.5; }
+        th.sorted .sort-arrow { opacity:1; }
+        .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0; }
+        .pagination-info { font-size:0.78rem; color:var(--text-secondary); margin-left:auto; }
+        .page-btn-disabled { opacity:0.35; pointer-events:none; }
+        .comment-truncate { max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+        .search-input-wrap { position:relative; flex:1; min-width:180px; max-width:280px; }
+        .search-input-wrap input { width:100%; box-sizing:border-box; padding-left:32px; height:36px; }
+        .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-secondary); font-size:0.85rem; pointer-events:none; }
+        .search-warn { background:rgba(251,191,36,0.1); border:1px solid var(--warning); border-radius:8px; padding:10px 16px; margin-bottom:14px; color:var(--warning); font-size:0.85rem; }
+        /* Modal overlay — pure CSS, no JS */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:999; align-items:center; justify-content:center; }
+        .modal-overlay.is-open { display:flex; }
+        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:32px; width:100%; max-width:480px; box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+        .modal-title { font-size:1.1rem; font-weight:600; margin:0; }
+        .field-label { display:block; font-size:0.78rem; color:var(--text-secondary); margin-bottom:4px; }
+        .field-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+    </style>
+</head>
+<body>
+
+<nav class="topbar">
+    <a class="topbar-brand" href="/ui/orders">ClassicModels</a>
+    <div class="topbar-nav">
+        <a href="/ui/orders" class="active">Orders</a>
+    </div>
+</nav>
+
+<div class="page-wrapper">
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Orders</h1>
+            <p class="page-subtitle" th:text="${totalElements} + ' orders in the database'">0 orders</p>
+        </div>
+        <!-- Opens Add modal by appending addOrder=true to current URL params -->
+        <a class="btn-primary"
+           th:href="@{/ui/orders(page=${currentPage},size=${size},sort=${sort},dir=${dir},status=${status},search=${search},addOrder=true)}">
+            + Add Order
+        </a>
+    </div>
+
+    <!-- Flash messages -->
+    <div th:if="${successMsg}"
+         style="background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:8px;padding:12px 16px;margin-bottom:16px;color:var(--success);font-size:0.875rem;"
+         th:text="${successMsg}"></div>
+    <div th:if="${errorMsg != null and !#strings.isEmpty(errorMsg)}"
+         style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:16px;color:var(--danger);font-size:0.875rem;"
+         th:text="${errorMsg}"></div>
+
+    <!-- Stat cards -->
+    <div class="summary-row">
+        <div class="summary-card">
+            <div class="summary-label">Total Orders</div>
+            <div class="summary-value" th:text="${totalElements}">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Shipped</div>
+            <div class="summary-value" style="color:var(--success)" th:text="${statShipped}">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">In Process</div>
+            <div class="summary-value" style="color:var(--warning)" th:text="${statInProcess}">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Cancelled</div>
+            <div class="summary-value" style="color:var(--danger)" th:text="${statCancelled}">0</div>
+        </div>
+    </div>
+
+    <!-- Search warn -->
+    <div th:if="${searchWarn}" class="search-warn" th:text="${searchWarn}"></div>
+
+    <!-- Filter + Search panel -->
+    <form method="get" action="/ui/orders" class="search-panel">
+        <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" name="search" placeholder="Search by Customer #…"
+                   th:value="${search}" style="height:36px;"/>
+        </div>
+        <select name="status" onchange="this.form.submit()" style="flex:0 0 auto;width:auto;min-width:160px;height:36px;">
+            <option value=""           th:selected="${status == null or status == ''}">All Statuses</option>
+            <option value="Shipped"    th:selected="${status == 'Shipped'}">Shipped</option>
+            <option value="In Process" th:selected="${status == 'In Process'}">In Process</option>
+            <option value="Processing" th:selected="${status == 'Processing'}">Processing</option>
+            <option value="Cancelled"  th:selected="${status == 'Cancelled'}">Cancelled</option>
+            <option value="Resolved"   th:selected="${status == 'Resolved'}">Resolved</option>
+            <option value="On Hold"    th:selected="${status == 'On Hold'}">On Hold</option>
+            <option value="Disputed"   th:selected="${status == 'Disputed'}">Disputed</option>
+        </select>
+        <select name="size" onchange="this.form.submit()" style="flex:0 0 auto;width:auto;height:36px;">
+            <option value="10"  th:selected="${size == 10}">10 / page</option>
+            <option value="20"  th:selected="${size == 20}">20 / page</option>
+            <option value="50"  th:selected="${size == 50}">50 / page</option>
+            <option value="100" th:selected="${size == 100}">100 / page</option>
+        </select>
+        <input type="hidden" name="sort" th:value="${sort}"/>
+        <input type="hidden" name="dir"  th:value="${dir}"/>
+        <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;">Search</button>
+        <a class="btn-secondary" href="/ui/orders">Reset</a>
+    </form>
+
+    <!-- Table -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th th:classappend="${sort == 'orderNumber'} ? 'sorted'">
+                    <a class="sort-link" th:href="@{/ui/orders(page=0,size=${size},status=${status},search=${search},sort='orderNumber',dir=${sort=='orderNumber' and dir=='asc'}?'desc':'asc')}">
+                        Order # <span class="sort-arrow" th:text="${sort=='orderNumber'}?(${dir=='asc'}?'↑':'↓'):'↕'"></span>
+                    </a>
+                </th>
+                <th th:classappend="${sort == 'orderDate'} ? 'sorted'">
+                    <a class="sort-link" th:href="@{/ui/orders(page=0,size=${size},status=${status},search=${search},sort='orderDate',dir=${sort=='orderDate' and dir=='asc'}?'desc':'asc')}">
+                        Order Date <span class="sort-arrow" th:text="${sort=='orderDate'}?(${dir=='asc'}?'↑':'↓'):'↕'"></span>
+                    </a>
+                </th>
+                <th th:classappend="${sort == 'requiredDate'} ? 'sorted'">
+                    <a class="sort-link" th:href="@{/ui/orders(page=0,size=${size},status=${status},search=${search},sort='requiredDate',dir=${sort=='requiredDate' and dir=='asc'}?'desc':'asc')}">
+                        Required Date <span class="sort-arrow" th:text="${sort=='requiredDate'}?(${dir=='asc'}?'↑':'↓'):'↕'"></span>
+                    </a>
+                </th>
+                <th th:classappend="${sort == 'shippedDate'} ? 'sorted'">
+                    <a class="sort-link" th:href="@{/ui/orders(page=0,size=${size},status=${status},search=${search},sort='shippedDate',dir=${sort=='shippedDate' and dir=='asc'}?'desc':'asc')}">
+                        Shipped Date <span class="sort-arrow" th:text="${sort=='shippedDate'}?(${dir=='asc'}?'↑':'↓'):'↕'"></span>
+                    </a>
+                </th>
+                <th th:classappend="${sort == 'status'} ? 'sorted'">
+                    <a class="sort-link" th:href="@{/ui/orders(page=0,size=${size},status=${status},search=${search},sort='status',dir=${sort=='status' and dir=='asc'}?'desc':'asc')}">
+                        Status <span class="sort-arrow" th:text="${sort=='status'}?(${dir=='asc'}?'↑':'↓'):'↕'"></span>
+                    </a>
+                </th>
+                <th>Customer</th>
+                <th>Comments</th>
+                <th class="align-right">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(orders)}">
+                <td colspan="8">
+                    <div class="empty-state">
+                        <span class="empty-icon">📋</span>
+                        No orders found for this filter.
+                    </div>
+                </td>
+            </tr>
+            <tr th:each="order : ${orders}">
+                <td>
+                    <span class="badge badge-blue text-mono" th:text="'#' + ${order.orderNumber}">—</span>
+                </td>
+                <td class="mono" th:text="${order.orderDate ?: '—'}">—</td>
+                <td class="mono" th:text="${order.requiredDate ?: '—'}">—</td>
+                <td class="mono">
+                    <span th:if="${order.shippedDate != null}" th:text="${order.shippedDate}">—</span>
+                    <span th:if="${order.shippedDate == null}" class="text-secondary">—</span>
+                </td>
+                <td>
+                    <span th:if="${order.status == 'Shipped'}"    class="badge badge-green"><span class="status-dot" style="background:var(--success)"></span>Shipped</span>
+                    <span th:if="${order.status == 'In Process'}" class="badge badge-yellow"><span class="status-dot" style="background:var(--warning)"></span>In Process</span>
+                    <span th:if="${order.status == 'Processing'}" class="badge badge-blue"><span class="status-dot" style="background:var(--accent)"></span>Processing</span>
+                    <span th:if="${order.status == 'Cancelled'}"  class="badge badge-red"><span class="status-dot" style="background:var(--danger)"></span>Cancelled</span>
+                    <span th:if="${order.status == 'Resolved'}"   class="badge badge-purple"><span class="status-dot" style="background:var(--purple)"></span>Resolved</span>
+                    <span th:if="${order.status == 'On Hold'}"    class="badge badge-yellow"><span class="status-dot" style="background:var(--warning)"></span>On Hold</span>
+                    <span th:if="${order.status == 'Disputed'}"   class="badge badge-red"><span class="status-dot" style="background:var(--danger)"></span>Disputed</span>
+                    <span th:if="${order.status == null or (order.status != 'Shipped' and order.status != 'In Process' and order.status != 'Processing' and order.status != 'Cancelled' and order.status != 'Resolved' and order.status != 'On Hold' and order.status != 'Disputed')}"
+                          class="badge badge-grey" th:text="${order.status ?: 'Unknown'}">Unknown</span>
+                </td>
+                <!--
+                  The orderView projection returns customerNumber as a flat integer field.
+                  The nested customer object is only populated in the detail call (no projection).
+                  Use order.customerNumber here; fall back to order.customer.customerNumber if somehow set.
+                -->
+                <td class="mono text-secondary"
+                    th:text="${order.customerNumber != null ? '#' + order.customerNumber : (order.customer != null ? '#' + order.customer.customerNumber : '—')}">—</td>
+                <td>
+            <span class="comment-truncate text-secondary text-sm"
+                  th:if="${order.comments != null and !order.comments.isEmpty()}"
+                  th:title="${order.comments}"
+                  th:text="${#strings.abbreviate(order.comments, 48)}"></span>
+                    <span class="text-secondary text-xs" th:if="${order.comments == null or order.comments.isEmpty()}" style="font-style:italic">—</span>
+                </td>
+                <td class="align-right" style="white-space:nowrap;">
+                    <a class="btn-table" th:href="@{/ui/orders/{id}(id=${order.orderNumber})}">View</a>
+                    <a class="btn-table" style="margin-left:4px;"
+                       th:href="@{/ui/orders/{id}(id=${order.orderNumber},edit=true)}">Edit</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination-bar" th:if="${totalPages > 1}">
+            <a class="page-btn" th:classappend="${currentPage == 0} ? 'page-btn-disabled'"
+               th:href="@{/ui/orders(page=${currentPage - 1},size=${size},sort=${sort},dir=${dir},status=${status},search=${search})}">‹</a>
+            <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                <th:block th:if="${i == 0 or i == totalPages - 1 or (i >= currentPage - 2 and i <= currentPage + 2)}">
+                    <a class="page-btn" th:classappend="${i == currentPage} ? 'active'"
+                       th:href="@{/ui/orders(page=${i},size=${size},sort=${sort},dir=${dir},status=${status},search=${search})}"
+                       th:text="${i + 1}">1</a>
+                </th:block>
+                <span th:if="${i == 1 and currentPage > 3}" style="color:var(--text-secondary);padding:0 2px">…</span>
+                <span th:if="${i == totalPages - 2 and currentPage < totalPages - 4}" style="color:var(--text-secondary);padding:0 2px">…</span>
+            </th:block>
+            <a class="page-btn" th:classappend="${currentPage >= totalPages - 1} ? 'page-btn-disabled'"
+               th:href="@{/ui/orders(page=${currentPage + 1},size=${size},sort=${sort},dir=${dir},status=${status},search=${search})}">›</a>
+            <span class="pagination-info">
+        Showing <span th:text="${currentPage * size + 1}">1</span>–<span
+                    th:text="${(currentPage + 1) * size > totalElements ? totalElements : (currentPage + 1) * size}">10</span>
+        of <span th:text="${totalElements}">0</span>
+      </span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Add Order Modal — shown when addOrder=true param is present ─────── -->
+<div class="modal-overlay" th:classappend="${addOrder} ? 'is-open'">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">New Order</h2>
+            <!-- Close = navigate back to list without addOrder param -->
+            <a th:href="@{/ui/orders(page=${currentPage},size=${size},sort=${sort},dir=${dir},status=${status},search=${search})}"
+               style="background:none;border:none;color:var(--text-secondary);font-size:1.3rem;cursor:pointer;line-height:1;text-decoration:none;">✕</a>
+        </div>
+
+        <div th:if="${errorMsg != null and !#strings.isEmpty(errorMsg)}"
+             style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:6px;padding:10px 14px;margin-bottom:16px;color:var(--danger);font-size:0.85rem;"
+             th:text="${errorMsg}"></div>
+
+        <form method="post" action="/ui/orders/create">
+            <div style="display:grid;gap:14px;">
+                <div class="field-grid-2">
+                    <div>
+                        <label class="field-label">Order Number *</label>
+                        <input type="number" name="orderNumber" required placeholder="e.g. 10500"
+                               style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                    <div>
+                        <label class="field-label">Customer Number *</label>
+                        <input type="number" name="customerNumber" required placeholder="e.g. 103"
+                               style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                </div>
+                <div class="field-grid-2">
+                    <div>
+                        <label class="field-label">Order Date *</label>
+                        <input type="date" name="orderDate" required style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                    <div>
+                        <label class="field-label">Required Date *</label>
+                        <input type="date" name="requiredDate" required style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Shipped Date <span style="opacity:0.5">(optional)</span></label>
+                    <input type="date" name="shippedDate" style="width:100%;box-sizing:border-box;"/>
+                </div>
+                <div>
+                    <label class="field-label">Status *</label>
+                    <select name="status" required style="width:100%;box-sizing:border-box;height:38px;">
+                        <option value="In Process">In Process</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Cancelled">Cancelled</option>
+                        <option value="Disputed">Disputed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Comments <span style="opacity:0.5">(optional)</span></label>
+                    <textarea name="comments" rows="3" placeholder="Any notes about this order…"
+                              style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;font-size:0.875rem;"></textarea>
+                </div>
+                <div class="form-actions">
+                    <a class="btn-secondary"
+                       th:href="@{/ui/orders(page=${currentPage},size=${size},sort=${sort},dir=${dir},status=${status},search=${search})}">Cancel</a>
+                    <button type="submit" class="btn-primary">Create Order</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
