@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="'Order #' + ${order.orderNumber} + ' — ClassicModels'">Order Detail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/js/inventory-theme.css}"/>
+    <style>
+        .meta-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+        .meta-key { font-size:0.7rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:0.3rem; }
+        .meta-val { font-size:0.9rem; color:var(--text-primary); }
+        .meta-val.accent { color:var(--accent); font-family:var(--font-mono); font-weight:600; font-size:1rem; }
+        .meta-val.muted  { color:var(--text-secondary); font-style:italic; }
+        .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+        .total-row { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; }
+        .total-label { font-size:0.72rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); }
+        .total-value { font-family:var(--font-mono); font-size:1.2rem; font-weight:600; color:var(--success); }
+        @media(max-width:680px){ .meta-grid{grid-template-columns:1fr 1fr;} }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:999; align-items:center; justify-content:center; }
+        .modal-overlay.is-open { display:flex; }
+        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:32px; width:100%; max-width:480px; box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+        .modal-title { font-size:1.1rem; font-weight:600; margin:0; }
+        .field-label { display:block; font-size:0.78rem; color:var(--text-secondary); margin-bottom:4px; }
+        .field-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+    </style>
+</head>
+<body>
+
+<nav class="topbar">
+    <a class="topbar-brand" href="/ui/orders">ClassicModels</a>
+    <div class="topbar-nav">
+        <a href="/ui/orders">Orders</a>
+    </div>
+</nav>
+
+<div class="page-wrapper-narrow">
+
+    <a class="back-link" href="/ui/orders">Back to Orders</a>
+
+    <!-- Flash messages -->
+    <div th:if="${successMsg}"
+         style="background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:8px;padding:12px 16px;margin-bottom:16px;color:var(--success);font-size:0.875rem;"
+         th:text="${successMsg}"></div>
+    <div th:if="${errorMsg != null and !#strings.isEmpty(errorMsg)}"
+         style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:16px;color:var(--danger);font-size:0.875rem;"
+         th:text="${errorMsg}"></div>
+
+    <!-- Page header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title" th:text="'Order #' + ${order.orderNumber}">Order</h1>
+            <div style="margin-top:0.5rem">
+                <span th:if="${order.status == 'Shipped'}"    class="badge badge-green"><span class="status-dot" style="background:var(--success)"></span>Shipped</span>
+                <span th:if="${order.status == 'In Process'}" class="badge badge-yellow"><span class="status-dot" style="background:var(--warning)"></span>In Process</span>
+                <span th:if="${order.status == 'Processing'}" class="badge badge-blue"><span class="status-dot" style="background:var(--accent)"></span>Processing</span>
+                <span th:if="${order.status == 'Cancelled'}"  class="badge badge-red"><span class="status-dot" style="background:var(--danger)"></span>Cancelled</span>
+                <span th:if="${order.status == 'Resolved'}"   class="badge badge-purple"><span class="status-dot" style="background:var(--purple)"></span>Resolved</span>
+                <span th:if="${order.status == 'On Hold'}"    class="badge badge-yellow"><span class="status-dot" style="background:var(--warning)"></span>On Hold</span>
+                <span th:if="${order.status == 'Disputed'}"   class="badge badge-red"><span class="status-dot" style="background:var(--danger)"></span>Disputed</span>
+                <span th:if="${order.status == null or (order.status != 'Shipped' and order.status != 'In Process' and order.status != 'Processing' and order.status != 'Cancelled' and order.status != 'Resolved' and order.status != 'On Hold' and order.status != 'Disputed')}"
+                      class="badge badge-grey" th:text="${order.status ?: 'Unknown'}">Unknown</span>
+            </div>
+        </div>
+        <a class="btn-primary" th:href="@{/ui/orders/{id}(id=${order.orderNumber},edit=true)}">✎ Edit Order</a>
+    </div>
+
+    <!-- Order Info Card -->
+    <div class="card mb-md">
+        <div class="card-header">Order Information</div>
+        <div class="card-body">
+            <div class="meta-grid">
+                <div>
+                    <div class="meta-key">Order Number</div>
+                    <div class="meta-val accent" th:text="'#' + ${order.orderNumber}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Order Date</div>
+                    <div class="meta-val" th:text="${order.orderDate ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Required Date</div>
+                    <div class="meta-val" th:text="${order.requiredDate ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Shipped Date</div>
+                    <div class="meta-val"
+                         th:classappend="${order.shippedDate == null} ? 'muted'"
+                         th:text="${order.shippedDate ?: 'Not yet shipped'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Status</div>
+                    <div class="meta-val" th:text="${order.status ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Line Items</div>
+                    <div class="meta-val" th:text="${#lists.size(details)}">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+      Customer Card — the detail call (GET /orders/{id}, no projection) returns
+      a nested "customer" object. We show it if present.
+      Fallback: show the flat customerNumber from the projection if somehow only that is set.
+    -->
+    <div class="card mb-md" th:if="${order.customer != null}">
+        <div class="card-header">Customer</div>
+        <div class="card-body">
+            <div class="meta-grid">
+                <div>
+                    <div class="meta-key">Customer #</div>
+                    <div class="meta-val accent" th:text="${order.customer.customerNumber}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Company</div>
+                    <div class="meta-val" th:text="${order.customer.customerName ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Contact</div>
+                    <div class="meta-val"
+                         th:text="${(order.customer.contactFirstName ?: '') + ' ' + (order.customer.contactLastName ?: '')}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Phone</div>
+                    <div class="meta-val" th:text="${order.customer.phone ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">City</div>
+                    <div class="meta-val" th:text="${order.customer.city ?: '—'}">—</div>
+                </div>
+                <div>
+                    <div class="meta-key">Country</div>
+                    <div class="meta-val" th:text="${order.customer.country ?: '—'}">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fallback: no nested customer object, show flat customerNumber -->
+    <div class="card mb-md" th:if="${order.customer == null and order.customerNumber != null}">
+        <div class="card-header">Customer</div>
+        <div class="card-body">
+            <div class="meta-key">Customer #</div>
+            <div class="meta-val accent" th:text="${order.customerNumber}">—</div>
+        </div>
+    </div>
+
+    <!--
+      Line Items Card
+      Uses OrderDetailDto fields directly — these come from the orderDetailView projection:
+        item.productName     — flat string
+        item.quantityOrdered — integer
+        item.priceEach       — BigDecimal
+        item.totalPrice      — BigDecimal (priceEach * qty, computed by projection)
+      DO NOT use item.product.productName or item.id.productCode — those are entity fields,
+      not available in the DTO.
+    -->
+    <div class="card mb-md">
+        <div class="card-header">Line Items</div>
+
+        <div th:if="${#lists.isEmpty(details)}">
+            <div class="empty-state">
+                <span class="empty-icon">📦</span>
+                No line items found for this order.
+            </div>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(details)}">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th class="align-right">Qty</th>
+                    <th class="align-right">Unit Price</th>
+                    <th class="align-right">Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item, stat : ${details}">
+                    <td class="mono text-secondary" th:text="${stat.count}">1</td>
+
+                    <!-- productName is a direct field on OrderDetailDto (from orderDetailView projection) -->
+                    <td th:text="${item.productName ?: '—'}">Product</td>
+
+                    <td class="align-right mono" th:text="${item.quantityOrdered ?: 0}">0</td>
+
+                    <td class="align-right mono"
+                        th:text="${item.priceEach != null ? '$' + #numbers.formatDecimal(item.priceEach, 1, 2) : '—'}">$0.00</td>
+
+                    <!-- totalPrice is computed by the projection (priceEach * quantityOrdered) -->
+                    <td class="align-right mono" style="color:var(--success); font-weight:600;"
+                        th:text="${item.totalPrice != null ? '$' + #numbers.formatDecimal(item.totalPrice, 1, 2) : '—'}">$0.00</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="total-row card-footer">
+                <span class="total-label">Order Total</span>
+                <span class="total-value"
+                      th:text="${'$' + #numbers.formatDecimal(orderTotal, 1, 2)}">$0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Card -->
+    <div class="card" th:if="${order.comments != null and !order.comments.isEmpty()}">
+        <div class="card-header">Comments</div>
+        <div class="card-body">
+            <p class="text-secondary text-sm mb-0" th:text="${order.comments}" style="line-height:1.7"></p>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Edit Order Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" th:classappend="${edit} ? 'is-open'">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Order
+                <span th:text="'#' + ${order.orderNumber}" style="color:var(--accent);font-family:var(--font-mono)"></span>
+            </h2>
+            <a th:href="@{/ui/orders/{id}(id=${order.orderNumber})}"
+               style="color:var(--text-secondary);font-size:1.3rem;text-decoration:none;line-height:1;">✕</a>
+        </div>
+
+        <form th:action="@{/ui/orders/{id}/update(id=${order.orderNumber})}" method="post">
+            <div style="display:grid;gap:14px;">
+                <div class="field-grid-2">
+                    <div>
+                        <label class="field-label">Order Date *</label>
+                        <input type="date" name="orderDate" required
+                               th:value="${order.orderDate}"
+                               style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                    <div>
+                        <label class="field-label">Required Date *</label>
+                        <input type="date" name="requiredDate" required
+                               th:value="${order.requiredDate}"
+                               style="width:100%;box-sizing:border-box;"/>
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Shipped Date <span style="opacity:0.5">(optional)</span></label>
+                    <input type="date" name="shippedDate"
+                           th:value="${order.shippedDate}"
+                           style="width:100%;box-sizing:border-box;"/>
+                </div>
+                <div>
+                    <label class="field-label">Status *</label>
+                    <select name="status" required style="width:100%;box-sizing:border-box;height:38px;">
+                        <option value="In Process" th:selected="${order.status == 'In Process'}">In Process</option>
+                        <option value="Processing" th:selected="${order.status == 'Processing'}">Processing</option>
+                        <option value="Shipped"    th:selected="${order.status == 'Shipped'}">Shipped</option>
+                        <option value="On Hold"    th:selected="${order.status == 'On Hold'}">On Hold</option>
+                        <option value="Resolved"   th:selected="${order.status == 'Resolved'}">Resolved</option>
+                        <option value="Cancelled"  th:selected="${order.status == 'Cancelled'}">Cancelled</option>
+                        <option value="Disputed"   th:selected="${order.status == 'Disputed'}">Disputed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Comments <span style="opacity:0.5">(optional)</span></label>
+                    <textarea name="comments" rows="3"
+                              style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;font-size:0.875rem;"
+                              th:text="${order.comments}"></textarea>
+                </div>
+                <div class="form-actions">
+                    <a class="btn-secondary" th:href="@{/ui/orders/{id}(id=${order.orderNumber})}">Cancel</a>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
