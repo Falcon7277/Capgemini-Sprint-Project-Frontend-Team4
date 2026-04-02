@@ -131,23 +131,22 @@
         </thead>
         <tbody>
         <tr th:each="emp : ${employees}">
-            <td class="ps-4 fw-bold text-dark" th:text="${emp.fullName}"></td>
-            <td th:text="${emp.email}"></td>
-            <td><span class="badge bg-soft-primary text-primary" style="background-color: #e7f1ff;" th:text="${emp.jobTitle}"></span></td>
-            <td th:text="${emp.extension}"></td>
+            <td class="ps-4 fw-bold text-dark" th:text="${emp['fullName']}"></td>
+            <td th:text="${emp['email']}"></td>
+            <td><span class="badge bg-soft-primary text-primary" style="background-color: #e7f1ff;" th:text="${emp['jobTitle']}"></span></td>
+            <td th:text="${emp['extension']}"></td>
             <td>
-                <span th:each="mgr : ${allEmployees}"
-                      th:if="${mgr.employeeNumber == emp.reportsTo}"
-                      th:text="${mgr.firstName + ' ' + mgr.lastName}">
-                </span>
-                <span th:if="${emp.reportsTo == null}">-</span>
+        <span th:each="mgr : ${allEmployees}"
+              th:if="${mgr['employeeNumber'] == emp['reportsTo']}"
+              th:text="${mgr['firstName'] + ' ' + mgr['lastName']}">
+        </span>
+                <span th:if="${emp['reportsTo'] == null}">-</span>
             </td>
             <td class="text-center">
-                <!-- Redirect Updated to /employees -->
-                <a th:href="@{/employees(editId=${emp.employeeNumber})}" class="btn btn-sm btn-outline-warning action-btn">
+                <a th:href="@{/employees(editId=${emp['employeeNumber']})}" class="btn btn-sm btn-outline-warning action-btn">
                     <i class="bi bi-pencil-square"></i>
                 </a>
-                <a th:href="@{/customers(empId=${emp.employeeNumber})}" class="btn btn-sm btn-outline-info action-btn">
+                <a th:href="@{/customerss(empId=${emp['employeeNumber']})}" class="btn btn-sm btn-outline-info action-btn">
                     <i class="bi bi-person-lines-fill"></i>
                 </a>
             </td>
@@ -235,58 +234,46 @@
     </div>
 </div>
 
-<div class="modal fade" id="editEmployeeModal" tabindex="-1"
-     th:classappend="${employeeToEdit != null} ? 'show d-block' : ''"
-     th:style="${employeeToEdit != null} ? 'display:block; background:rgba(0,0,0,0.5);' : ''">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Update Employee #<span th:text="${editId}"></span></h5>
-                <!-- Redirect Updated to /employees -->
-                <a th:href="@{/employees}" class="btn-close"></a>
-            </div>
+<div class="modal-body p-4" th:if="${employeeToEdit != null}">
+    <form th:action="@{/updateJobTitle(id=${editId})}" th:method="PUT" class="mb-4 pb-3 border-bottom">
+        <label class="form-label small fw-bold">Update Job Title</label>
+        <div class="input-group">
+            <input type="text" name="jobTitle" th:value="${employeeToEdit.jobTitle}" class="form-control" required>
+            <button type="submit" class="btn btn-dark">Update</button>
+        </div>
+    </form>
 
-            <div class="modal-body p-4" th:if="${employeeToEdit != null}">
-                <form th:action="@{/updateJobTitle(id=${editId})}" th:method="PUT" class="mb-4 pb-3 border-bottom">
-                    <label class="form-label small fw-bold">Update Job Title</label>
-                    <div class="input-group">
-                        <input type="text" name="jobTitle" class="form-control" th:value="${employeeToEdit.jobTitle}" required>
-                        <button type="submit" class="btn btn-dark">Update</button>
-                    </div>
-                </form>
+    <div class="mb-4 pb-3 border-bottom">
+        <label class="form-label small fw-bold">Change Office</label>
+        <div class="input-group">
+            <select id="officeIdInput" class="form-select">
+                <option value="">-- Select Office --</option>
+                <option th:each="off : ${allOffices}"
+                        th:value="${off['officeCode']}"
+                        th:text="${off['city'] + ' (Code: ' + off['officeCode'] + ')'}"
+                        th:selected="${employeeToEdit.office != null and #strings.toString(employeeToEdit.office.officeCode) == #strings.toString(off['officeCode'])}">
+                </option>
+            </select>
+            <button type="button" onclick="updateOfficeJS()" class="btn btn-dark">Link Office</button>
+        </div>
+    </div>
 
-                <div class="mb-4 pb-3 border-bottom">
-                    <label class="form-label small fw-bold">Change Office</label>
-                    <div class="input-group">
-                        <select id="officeIdInput" class="form-select">
-                            <option value="" th:if="${employeeToEdit['office'] == null}">-- Select Office --</option>
-                            <option th:each="off : ${allOffices}"
-                                    th:value="${off.officeCode}"
-                                    th:text="${off.city + ' (Code: ' + off.officeCode + ')'}"
-                                    th:selected="${employeeToEdit['office'] != null and #strings.toString(employeeToEdit['office']['officeCode']) == #strings.toString(off.officeCode)}">
-                            </option>
-                        </select>
-                        <button type="button" onclick="updateOfficeJS()" class="btn btn-dark">Link Office</button>
-                    </div>
-                    <small class="text-muted">Current location data will be updated upon linking.</small>
-                </div>
-
-                <div>
-                    <label class="form-label small fw-bold">Change Reporting Id</label>
-                    <div class="input-group">
-                        <select id="managerIdInput" class="form-select">
-                            <option value="" selected>-- Change Reporting Id --</option>
-                            <th:block th:each="mgr : ${allEmployees}">
-                                <option th:if="${mgr.employeeNumber != employeeToEdit.employeeNumber}"
-                                        th:value="${mgr.employeeNumber}"
-                                        th:text="${mgr.firstName + ' ' + mgr.lastName + ' (ID: ' + mgr.employeeNumber + ')'}">
-                                </option>
-                            </th:block>
-                        </select>
-                        <button type="button" onclick="updateManagerJS()" class="btn btn-dark">Assign</button>
-                    </div>
-                </div>
-            </div>
+    <div>
+        <label class="form-label small fw-bold">Change Reporting Id</label>
+        <div class="input-group">
+            <select id="managerIdInput" class="form-select">
+                <option value="" selected>-- Change Reporting Id --</option>
+                <th:block th:each="mgr : ${allEmployees}">
+                    <option th:if="${mgr['employeeNumber'] != editId}"
+                            th:value="${mgr['employeeNumber']}"
+                            th:text="${mgr['firstName'] + ' ' + mgr['lastName'] + ' (ID: ' + mgr['employeeNumber'] + ')'}">
+                    </option>
+                </th:block>
+            </select>
+            <button type="button" onclick="updateManagerJS()" class="btn btn-dark">Assign</button>
+        </div>
+    </div>
+</div>
             <div class="modal-footer bg-light">
                 <!-- Redirect Updated to /employees -->
                 <a th:href="@{/employees}" class="btn btn-secondary w-100">Close</a>

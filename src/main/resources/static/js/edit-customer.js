@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fields.forEach(markDirty);
 
-    const btn = document.querySelector("#updateBtn");
+    const btn = document.getElementById("updateBtn");
 
     document.querySelectorAll("[data-original]").forEach(el => {
         el.addEventListener("input", () => {
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // ===== MAIN UPDATE =====
 function updateCustomer() {
 
-    const btn = document.querySelector("button.btn-success");
+    const btn = document.getElementById("updateBtn");
     btn.disabled = true;
     btn.innerText = "Updating...";
 
@@ -53,21 +53,17 @@ function updateCustomer() {
         let current = el.value.trim();
         let original = (el.dataset.original || "").trim();
 
-        // Normalize phone
         if (options.normalize === "phone") {
             current = current.replace(/[^\d]/g, '');
             original = original.replace(/[^\d]/g, '');
         }
 
-        //Convert number
         if (options.type === "number" && current !== "") {
             current = Number(current);
             original = Number(original);
         }
 
-        //Dirty check
         if (current !== original) {
-
             if (options.nullable && current === "") {
                 data[key] = null;
             } else {
@@ -76,34 +72,30 @@ function updateCustomer() {
         }
     }
 
-    // ===== DIRTY CHECK =====
+    // ===== FIELDS =====
     checkAndAdd("customerName", "customerName");
     checkAndAdd("contactFirstName", "contactFirstName");
     checkAndAdd("contactLastName", "contactLastName");
-
     checkAndAdd("phone", "phone", { normalize: "phone" });
-
     checkAndAdd("addressLine1", "addressLine1");
     checkAndAdd("addressLine2", "addressLine2", { nullable: true });
-
     checkAndAdd("city", "city");
     checkAndAdd("country", "country");
-
     checkAndAdd("creditLimit", "creditLimit", {
         type: "number",
         nullable: true
     });
 
     // ===== VALIDATION =====
-    if (data.customerName !== undefined && data.customerName === "") {
+    if (data.customerName === "") {
         return handleError("customerName", "Customer name cannot be blank", btn);
     }
 
-    if (data.contactFirstName !== undefined && data.contactFirstName === "") {
+    if (data.contactFirstName === "") {
         return handleError("contactFirstName", "First name cannot be blank", btn);
     }
 
-    if (data.contactLastName !== undefined && data.contactLastName === "") {
+    if (data.contactLastName === "") {
         return handleError("contactLastName", "Last name cannot be blank", btn);
     }
 
@@ -133,13 +125,13 @@ function updateCustomer() {
     })
     .then(res => {
         if (!res.ok) throw res;
-        return res.json();
+        return res.text(); // backend doesn't return JSON
     })
     .then(() => {
         showToast("Customer updated successfully");
 
         setTimeout(() => {
-            window.location.href = "/customers";
+            window.location.href = "/customers?success=updated";
         }, 1200);
     })
     .catch(async err => {
@@ -158,7 +150,7 @@ function updateCustomer() {
 
 // ===== HELPERS =====
 
-//Toast
+// Toast
 function showToast(message, isError = false) {
     const toastEl = document.getElementById("toast");
     const body = document.getElementById("toastBody");
@@ -173,7 +165,7 @@ function showToast(message, isError = false) {
 }
 
 
-//Dirty highlight
+// Dirty highlight
 function markDirty(fieldId) {
     const el = document.getElementById(fieldId);
     if (!el) return;
@@ -192,22 +184,20 @@ function markDirty(fieldId) {
 }
 
 
-//Check if any field changed
+// Check if any field changed
 function hasChanges() {
     return [...document.querySelectorAll("[data-original]")]
         .some(el => el.value.trim() !== (el.dataset.original || "").trim());
 }
 
 
-//Inline error
+// Inline error
 function handleError(fieldId, message, btn) {
     const el = document.getElementById(fieldId);
 
     setError(el, message);
     showToast(message, true);
     reset(btn);
-
-    return;
 }
 
 function setError(el, message) {
@@ -228,7 +218,7 @@ function clearError(el) {
 }
 
 
-//Reset button
+// Reset button
 function reset(btn) {
     btn.disabled = false;
     btn.innerText = "Update";

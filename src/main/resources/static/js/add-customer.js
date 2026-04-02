@@ -18,7 +18,7 @@ async function addCustomer() {
     const creditLimit = document.getElementById("creditLimit").value;
     const empId = document.getElementById("salesRepEmployeeNumber").value;
 
-    // 🔥 FRONTEND VALIDATION (aligned with backend)
+    //FRONTEND VALIDATION (aligned with backend)
 
     if (!customerName) return handleError("Customer name is required");
     if (!contactFirstName) return handleError("First name is required");
@@ -42,7 +42,7 @@ async function addCustomer() {
         return handleError("Credit limit cannot be negative");
     }
 
-    // 🔥 Build request payload
+    //Build request payload
     const data = {
         customerName,
         contactFirstName,
@@ -57,7 +57,7 @@ async function addCustomer() {
         creditLimit: creditLimit || null
     };
 
-    // 🔥 SDR relationship handling
+    //SDR relationship handling
     if (empId) {
         data.salesRepEmployee = `/employees/${empId}`;
     }
@@ -91,7 +91,7 @@ async function addCustomer() {
         handleError(err.message);
     }
 
-    // 🔥 Helper
+    //Helper
     function handleError(message) {
         alert(message);
         btn.disabled = false;

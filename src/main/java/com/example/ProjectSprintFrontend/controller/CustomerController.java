@@ -106,10 +106,10 @@ public class CustomerController {
                     response.getPage() != null ? response.getPage().getTotalPages() : 1);
         }
 
-        model.addAttribute("currentPage", page);   // ✅ CRITICAL FIX
+        model.addAttribute("currentPage", page);   //CRITICAL FIX
         model.addAttribute("type", type);
         model.addAttribute("customerId", id);
-        model.addAttribute("sort", sort);          // ✅ needed for UI state
+        model.addAttribute("sort", sort);          //needed for UI state
 
         return "customer-data";
     }

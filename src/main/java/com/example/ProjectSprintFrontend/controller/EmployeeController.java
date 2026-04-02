@@ -33,17 +33,16 @@ public class EmployeeController {
             @RequestParam(required = false) String success,
             Model model) {
 
-        // Changed to method call
         String url = getBackendUrl() + "?projection=employeeView&page=" + page + "&size=10";
 
         try {
+            // Office and Employee Lists (Keep as Map for bulk lists if needed, but DTO is safer)
             Map officeResponse = restTemplate.getForObject(BASE_API + "/offices", Map.class);
             if (officeResponse != null && officeResponse.containsKey("_embedded")) {
                 Map embedded = (Map) officeResponse.get("_embedded");
                 model.addAttribute("allOffices", embedded.get("offices"));
             }
 
-            // Changed to method call
             Map empResponse = restTemplate.getForObject(getBackendUrl() + "?size=1000", Map.class);
             if (empResponse != null && empResponse.containsKey("_embedded")) {
                 Map embedded = (Map) empResponse.get("_embedded");
@@ -58,11 +57,15 @@ public class EmployeeController {
                 model.addAttribute("isSearch", false);
             }
 
+            // CRITICAL FIX: Use Employee_DTO for the object being edited
             if (editId != null) {
-                // Changed to method call
-                Map employeeToEdit = restTemplate.getForObject(getBackendUrl() + "/" + editId, Map.class);
-                model.addAttribute("employeeToEdit", employeeToEdit);
-                model.addAttribute("editId", editId);
+                try {
+                    Employee_DTO employeeToEdit = restTemplate.getForObject(getBackendUrl() + "/" + editId, Employee_DTO.class);
+                    model.addAttribute("employeeToEdit", employeeToEdit);
+                    model.addAttribute("editId", editId);
+                } catch (Exception e) {
+                    model.addAttribute("error", "Employee not found for ID: " + editId);
+                }
             }
 
         } catch (Exception e) {
@@ -144,7 +147,7 @@ public class EmployeeController {
         return "redirect:/employees";
     }
 
-    @GetMapping("/customers")
+    @GetMapping("/customerss")
     public String viewCustomers(@RequestParam("empId") Integer empId, @RequestParam(defaultValue = "0") int page, Model model) {
 
         // FIXED: Use BASE_API instead of localhost

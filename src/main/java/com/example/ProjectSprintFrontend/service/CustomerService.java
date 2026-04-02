@@ -146,24 +146,24 @@ public class CustomerService {
 
         LocalDate today = LocalDate.now();
 
-        // ✅ If shipped → just show shipped
+        //If shipped → just show shipped
         if (o.getShippedDate() != null) {
             return "Shipped";
         }
 
-        // ✅ No required date
+        //No required date
         if (o.getRequiredDate() == null) {
             return "-";
         }
 
         long days = ChronoUnit.DAYS.between(today, o.getRequiredDate());
 
-        // ✅ Future delivery
+        //Future delivery
         if (days > 0) {
             return days + " days left";
         }
 
-        // ✅ Overdue cases
+        //Overdue cases
         long overdueDays = Math.abs(days);
 
         if (overdueDays <= 7) {
