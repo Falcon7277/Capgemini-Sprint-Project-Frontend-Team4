@@ -19,6 +19,15 @@ public class AppConfig {
         return new RestTemplate(factory);
     }
 
+    //divy bean 
+    @Bean
+    public RestTemplate restTemplate2() {
+        HttpClient httpClient = HttpClients.createDefault();
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        return new RestTemplate(factory);
+    }
+
     @Bean
     public ObjectMapper objectMapper(){
         return new ObjectMapper();
